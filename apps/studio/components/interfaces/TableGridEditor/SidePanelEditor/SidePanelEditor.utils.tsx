@@ -5,12 +5,16 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 
 import { Query } from 'components/grid/query/Query'
+import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
+import SparkBar from 'components/ui/SparkBar'
 import { createDatabaseColumn } from 'data/database-columns/database-column-create-mutation'
 import { deleteDatabaseColumn } from 'data/database-columns/database-column-delete-mutation'
 import { updateDatabaseColumn } from 'data/database-columns/database-column-update-mutation'
 import { FOREIGN_KEY_CASCADE_ACTION } from 'data/database/database-query-constants'
+import { entityTypeKeys } from 'data/entity-types/keys'
 import { getQueryClient } from 'data/query-client'
 import { executeSql } from 'data/sql/execute-sql-query'
+import { sqlKeys } from 'data/sql/keys'
 import { tableKeys } from 'data/tables/keys'
 import { createTable as createTableMutation } from 'data/tables/table-create-mutation'
 import { deleteTable as deleteTableMutation } from 'data/tables/table-delete-mutation'
@@ -18,9 +22,7 @@ import { getTable } from 'data/tables/table-query'
 import { updateTable as updateTableMutation } from 'data/tables/table-update-mutation'
 import { getTables } from 'data/tables/tables-query'
 import { getViews } from 'data/views/views-query'
-import { useStore } from 'hooks'
 import { timeout, tryParseJson } from 'lib/helpers'
-import { IMetaStore } from 'stores/pgmeta/MetaStore'
 import {
   generateCreateColumnPayload,
   generateUpdateColumnPayload,
@@ -32,9 +34,6 @@ import {
   UpdateColumnPayload,
 } from './SidePanelEditor.types'
 import { ImportContent } from './TableEditor/TableEditor.types'
-import { sqlKeys } from 'data/sql/keys'
-import { entityTypeKeys } from 'data/entity-types/keys'
-import SparkBar from 'components/ui/SparkBar'
 
 const BATCH_SIZE = 1000
 const CHUNK_SIZE = 1024 * 1024 * 0.1 // 0.1MB
@@ -43,31 +42,33 @@ export interface UseEncryptedColumnsArgs {
   schemaName?: string
   tableName?: string
 }
-
-const listEncryptedColumns = async (meta: IMetaStore, schema: string, table: string) => {
+const listEncryptedColumns = async (
+  projectRef: string,
+  connectionString: string | undefined = undefined,
+  schema: string,
+  table: string
+) => {
   if (!table) return []
 
-  const views = await getViews({
-    projectRef: meta.projectRef,
-    connectionString: meta.connectionString,
-    schema,
-  })
+  const views = await getViews({ projectRef, connectionString, schema })
   const decryptedView = views.find((view) => view.name === `decrypted_${table}`)
   if (!decryptedView) return []
 
-  const encryptedColumns = await meta.query(
-    `SELECT column_name as name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'decrypted_${table}' and column_name like 'decrypted_%'`
-  )
-  if (!encryptedColumns.error) {
-    return encryptedColumns.map((column: any) => column.name.split('decrypted_')[1])
-  } else {
-    console.error('Error fetching encrypted columns', encryptedColumns.error)
+  try {
+    const encryptedColumns = await executeSql({
+      projectRef,
+      connectionString,
+      sql: `SELECT column_name as name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'decrypted_${table}' and column_name like 'decrypted_%'`,
+    })
+    return encryptedColumns.result.map((column: any) => column.name.split('decrypted_')[1])
+  } catch (error) {
+    console.error('Error fetching encrypted columns', error)
     return []
   }
 }
 
 export function useEncryptedColumns({ schemaName, tableName }: UseEncryptedColumnsArgs) {
-  const { meta } = useStore()
+  const { project } = useProjectContext()
   const [encryptedColumns, setEncryptedColumns] = useState<string[]>([])
 
   useEffect(() => {
@@ -75,7 +76,12 @@ export function useEncryptedColumns({ schemaName, tableName }: UseEncryptedColum
 
     const getEncryptedColumns = async () => {
       if (schemaName !== undefined && tableName !== undefined) {
-        const columns = await listEncryptedColumns(meta, schemaName, tableName)
+        const columns = await listEncryptedColumns(
+          project?.ref!,
+          project?.connectionString,
+          schemaName,
+          tableName
+        )
 
         if (isMounted) {
           setEncryptedColumns(columns)

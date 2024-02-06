@@ -14,7 +14,6 @@ import { Button, IconArrowRight, IconBell, IconInbox, Popover } from 'ui'
 import ConfirmModal from 'components/ui/Dialogs/ConfirmDialog'
 import { useNotificationsQuery } from 'data/notifications/notifications-query'
 import { useNotificationsUpdateMutation } from 'data/notifications/notifications-update-mutation'
-import { getProjectDetail } from 'data/projects/project-detail-query'
 import { useProjectRestartServicesMutation } from 'data/projects/project-restart-services-mutation'
 import { ProjectInfo, setProjectPostgrestStatus } from 'data/projects/projects-query'
 import { useStore } from 'hooks'
@@ -99,9 +98,6 @@ const NotificationsPopover = ({ alt = false }: NotificationsPopoverProps) => {
     // [Joshen] Leaving this as an exception for RQ due to dynamic URL
     const res = await post(`${API_URL}/database/${projectToApplyMigration.ref}/${resource}`, {})
     if (!res.error) {
-      const project = await getProjectDetail({ ref: projectToApplyMigration.ref })
-      if (project) meta.setProjectDetails(project)
-
       ui.setNotification({
         category: 'success',
         message: `Successfully applied migration for project "${projectToApplyMigration.name}"`,
@@ -129,9 +125,6 @@ const NotificationsPopover = ({ alt = false }: NotificationsPopoverProps) => {
       {}
     )
     if (!res.error) {
-      const project = await getProjectDetail({ ref: projectToRollbackMigration.ref })
-      if (project) meta.setProjectDetails(project)
-
       ui.setNotification({
         category: 'success',
         message: `Successfully rolled back migration for project "${projectToRollbackMigration.name}"`,
