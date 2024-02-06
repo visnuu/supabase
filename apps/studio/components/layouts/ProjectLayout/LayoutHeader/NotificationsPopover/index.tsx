@@ -5,12 +5,12 @@ import {
   NotificationStatus,
   PostgresqlUpgradeData,
 } from '@supabase/shared-types/out/notifications'
-import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/router'
 import { Fragment, useState } from 'react'
 import { Button, IconArrowRight, IconBell, IconInbox, Popover } from 'ui'
 
+import { useQueryClient } from '@tanstack/react-query'
 import ConfirmModal from 'components/ui/Dialogs/ConfirmDialog'
 import { useNotificationsQuery } from 'data/notifications/notifications-query'
 import { useNotificationsUpdateMutation } from 'data/notifications/notifications-update-mutation'
@@ -27,9 +27,8 @@ interface NotificationsPopoverProps {
 
 const NotificationsPopover = ({ alt = false }: NotificationsPopoverProps) => {
   const router = useRouter()
-  const { meta, ui } = useStore()
+  const { ui } = useStore()
   const queryClient = useQueryClient()
-
   const { data: notifications } = useNotificationsQuery()
   const { mutate: updateNotifications } = useNotificationsUpdateMutation({
     onError: () => console.error('Failed to update notifications'),

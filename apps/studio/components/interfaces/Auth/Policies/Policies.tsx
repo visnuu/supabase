@@ -8,6 +8,7 @@ import { useCallback, useState } from 'react'
 import toast from 'react-hot-toast'
 import { IconHelpCircle } from 'ui'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { useIsRLSAIAssistantEnabled } from 'components/interfaces/App/FeaturePreview/FeaturePreviewContext'
 import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
 import NoSearchResults from 'components/to-be-cleaned/NoSearchResults'
@@ -18,6 +19,7 @@ import { useDatabasePolicyCreateMutation } from 'data/database-policies/database
 import { useDatabasePolicyDeleteMutation } from 'data/database-policies/database-policy-delete-mutation'
 import { useDatabasePolicyUpdateMutation } from 'data/database-policies/database-policy-update-mutation'
 import { useTableUpdateMutation } from 'data/tables/table-update-mutation'
+import { useStore } from 'hooks'
 
 interface PoliciesProps {
   tables: PostgresTable[]
@@ -36,6 +38,8 @@ const Policies = ({
   const { ref } = useParams()
   const { project } = useProjectContext()
 
+  const { ui } = useStore()
+  const queryClient = useQueryClient()
   const isAiAssistantEnabled = useIsRLSAIAssistantEnabled()
 
   const [selectedSchemaAndTable, setSelectedSchemaAndTable] = useState<any>({})
