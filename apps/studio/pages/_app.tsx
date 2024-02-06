@@ -42,6 +42,7 @@ import {
   CommandMenuWrapper,
   RouteValidationWrapper,
 } from 'components/interfaces/App'
+import { AppBannerContextProvider } from 'components/interfaces/App/AppBannerWrapperContext'
 import {
   FeaturePreviewContextProvider,
   FeaturePreviewModal,
@@ -55,10 +56,9 @@ import { BASE_PATH, IS_PLATFORM, LOCAL_STORAGE_KEYS } from 'lib/constants'
 import { dart } from 'lib/constants/prism'
 import { ProfileProvider } from 'lib/profile'
 import { useAppStateSnapshot } from 'state/app-state'
-import { RootStore } from 'stores'
+import UiStore from 'stores/UiStore'
 import HCaptchaLoadedStore from 'stores/hcaptcha-loaded-store'
 import { AppPropsWithLayout } from 'types'
-import { AppBannerContextProvider } from 'components/interfaces/App/AppBannerWrapperContext'
 
 dayjs.extend(customParseFormat)
 dayjs.extend(utc)
@@ -89,7 +89,7 @@ function CustomApp({ Component, pageProps }: AppPropsWithLayout) {
   const queryClient = useRootQueryClient()
 
   const consentToastId = useRef<string>()
-  const [rootStore] = useState(() => new RootStore())
+  const [rootStore] = useState(() => ({ ui: new UiStore() }))
 
   // [Joshen] Some issues with using createBrowserSupabaseClient
   const [supabase] = useState(() =>
