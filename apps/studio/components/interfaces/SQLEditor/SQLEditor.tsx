@@ -38,6 +38,7 @@ import { isRoleImpersonationEnabled, useGetImpersonatedRole } from 'state/role-i
 import { getSqlEditorStateSnapshot, useSqlEditorStateSnapshot } from 'state/sql-editor'
 import { AiIconAnimation, cn } from 'ui'
 import { subscriptionHasHipaaAddon } from '../Billing/Subscription/Subscription.utils'
+import { AISQLEditorPolicyChat } from './AIPolicyChat'
 import AISchemaSuggestionPopover from './AISchemaSuggestionPopover'
 import { DiffActionBar } from './DiffActionBar'
 import { sqlAiDisclaimerComment, untitledSnippetTitle } from './SQLEditor.constants'
@@ -766,6 +767,19 @@ const SQLEditor = () => {
             </div>
           </Split>
         </div>
+        {isAiOpen && (
+          <AISQLEditorPolicyChat
+            messages={[]}
+            loading={false}
+            onSubmit={function (s: string): void {
+              throw new Error('Function not implemented.')
+            }}
+            onDiff={function (s: string): void {
+              throw new Error('Function not implemented.')
+            }}
+            onChange={() => {}}
+          />
+        )}
       </div>
     </SQLEditorContext.Provider>
   )
