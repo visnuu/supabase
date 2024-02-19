@@ -28,6 +28,7 @@ interface AIPolicyChatProps {
   loading: boolean
   onSubmit: (s: string) => void
   onDiff: (s: string) => void
+  onClose: () => void
   onChange: (value: boolean) => void
 }
 
@@ -36,6 +37,7 @@ export const AISQLEditorPolicyChat = ({
   loading,
   onSubmit,
   onDiff,
+  onClose,
   onChange,
 }: AIPolicyChatProps) => {
   const { profile } = useProfile()
@@ -79,8 +81,11 @@ export const AISQLEditorPolicyChat = ({
   return (
     <div
       id={'ai-chat-assistant'}
-      className="flex flex-col h-full w-[360px] border-l border-control"
+      className="flex flex-col h-full min-w-[400px] w-[400px] border-l border-control"
     >
+      <Button className="mx-6" onClick={onClose}>
+        Close the Assistant
+      </Button>
       <div className="overflow-auto flex-1">
         <Message
           key="zero"

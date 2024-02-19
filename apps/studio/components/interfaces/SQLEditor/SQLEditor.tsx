@@ -1,15 +1,17 @@
 import { Monaco } from '@monaco-editor/react'
+import { useChat } from 'ai/react'
 import { useParams, useTelemetryProps } from 'common'
 import { motion } from 'framer-motion'
+import { FileDiff } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import Split from 'react-split'
 import { format } from 'sql-formatter'
+import { AiIconAnimation, cn } from 'ui'
 
 import ConfirmModal from 'components/ui/Dialogs/ConfirmDialog'
-import { useSqlEditMutation } from 'data/ai/sql-edit-mutation'
-import { useSqlGenerateMutation } from 'data/ai/sql-generate-mutation'
 import { useSqlTitleGenerateMutation } from 'data/ai/sql-title-mutation'
 import { SqlSnippet } from 'data/content/sql-snippets-query'
 import { useEntityDefinitionsQuery } from 'data/database/entity-definitions-query'
@@ -25,18 +27,16 @@ import {
   useSelectedProject,
   useStore,
 } from 'hooks'
-import { IS_PLATFORM, LOCAL_STORAGE_KEYS, OPT_IN_TAGS } from 'lib/constants'
+import { BASE_PATH, IS_PLATFORM, LOCAL_STORAGE_KEYS, OPT_IN_TAGS } from 'lib/constants'
 import { uuidv4 } from 'lib/helpers'
 import { useProfile } from 'lib/profile'
 import { wrapWithRoleImpersonation } from 'lib/role-impersonation'
 import Telemetry from 'lib/telemetry'
-import { FileDiff } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { isError } from 'lodash'
 import { useAppStateSnapshot } from 'state/app-state'
 import { useDatabaseSelectorStateSnapshot } from 'state/database-selector'
 import { isRoleImpersonationEnabled, useGetImpersonatedRole } from 'state/role-impersonation-state'
 import { getSqlEditorStateSnapshot, useSqlEditorStateSnapshot } from 'state/sql-editor'
-import { AiIconAnimation, cn } from 'ui'
 import { subscriptionHasHipaaAddon } from '../Billing/Subscription/Subscription.utils'
 import { AISQLEditorPolicyChat } from './AIPolicyChat'
 import AISchemaSuggestionPopover from './AISchemaSuggestionPopover'
@@ -91,8 +91,6 @@ const SQLEditor = () => {
   const databaseSelectorState = useDatabaseSelectorStateSnapshot()
 
   const { mutate: formatQuery } = useFormatQueryMutation()
-  const { mutateAsync: generateSql, isLoading: isGenerateSqlLoading } = useSqlGenerateMutation()
-  const { mutateAsync: editSql, isLoading: isEditSqlLoading } = useSqlEditMutation()
   const { mutateAsync: titleSql } = useSqlTitleGenerateMutation()
   const { mutateAsync: generateSqlTitle } = useSqlTitleGenerateMutation()
 
@@ -134,8 +132,6 @@ const SQLEditor = () => {
   const [isFirstRender, setIsFirstRender] = useState(true)
   const [lineHighlights, setLineHighlights] = useState<string[]>([])
 
-  const isAiLoading = isGenerateSqlLoading || isEditSqlLoading
-
   // Used for cleaner framer motion transitions
   useEffect(() => {
     setIsFirstRender(false)
@@ -159,6 +155,27 @@ const SQLEditor = () => {
   const entityDefinitions = includeSchemaMetadata ? data?.map((def) => def.sql.trim()) : undefined
 
   const isDiffOpen = !!sqlDiff
+
+  const {
+    messages: chatMessages,
+    append,
+    isLoading: isLoadingChat,
+  } = useChat({
+    api: `${BASE_PATH}/api/ai/sql/suggest`,
+    body: {
+      entityDefinitions: isOptedInToAI ? entityDefinitions : undefined,
+    },
+  })
+
+  const messages = useMemo(() => {
+    const merged = [...chatMessages.map((m) => ({ ...m, isDebug: false }))]
+
+    return merged.sort(
+      (a, b) =>
+        (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0) ||
+        a.role.localeCompare(b.role)
+    )
+  }, [chatMessages])
 
   const [savedSplitSize, setSavedSplitSize] = useLocalStorage(
     LOCAL_STORAGE_KEYS.SQL_EDITOR_SPLIT_SIZE,
@@ -769,15 +786,46 @@ const SQLEditor = () => {
         </div>
         {isAiOpen && (
           <AISQLEditorPolicyChat
-            messages={[]}
-            loading={false}
-            onSubmit={function (s: string): void {
-              throw new Error('Function not implemented.')
-            }}
-            onDiff={function (s: string): void {
-              throw new Error('Function not implemented.')
+            messages={messages}
+            loading={isLoadingChat}
+            onSubmit={(message) =>
+              append({
+                content: message,
+                role: 'user',
+                createdAt: new Date(),
+              })
+            }
+            onDiff={(sql) => {
+              try {
+                const currentSql = editorRef.current?.getValue()
+
+                let title: string | undefined
+
+                setAiQueryCount((count) => count + 1)
+
+                const formattedSql =
+                  sqlAiDisclaimerComment +
+                  '\n\n' +
+                  format(sql, {
+                    language: 'postgresql',
+                    keywordCase: 'lower',
+                  })
+
+                setSqlDiff({
+                  original: currentSql ?? '',
+                  modified: formattedSql,
+                })
+              } catch (error: unknown) {
+                if (isError(error)) {
+                  ui.setNotification({
+                    category: 'error',
+                    message: error.message,
+                  })
+                }
+              }
             }}
             onChange={() => {}}
+            onClose={() => setIsAiOpen(false)}
           />
         )}
       </div>
