@@ -156,13 +156,18 @@ const SQLEditor = () => {
 
   const isDiffOpen = !!sqlDiff
 
+  const editorRef = useRef<IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<Monaco | null>(null)
+  const diffEditorRef = useRef<IStandaloneDiffEditor | null>(null)
+
   const {
     messages: chatMessages,
     append,
     isLoading: isLoadingChat,
   } = useChat({
-    api: `${BASE_PATH}/api/ai/sql/suggest`,
+    api: `${BASE_PATH}/api/ai/sql/generate-v2`,
     body: {
+      existingSql: editorRef.current?.getValue(),
       entityDefinitions: isOptedInToAI ? entityDefinitions : undefined,
     },
   })
@@ -239,10 +244,6 @@ const SQLEditor = () => {
     },
     [id]
   )
-
-  const editorRef = useRef<IStandaloneCodeEditor | null>(null)
-  const monacoRef = useRef<Monaco | null>(null)
-  const diffEditorRef = useRef<IStandaloneDiffEditor | null>(null)
 
   /**
    * Sets the snippet title using AI.
