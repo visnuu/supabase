@@ -928,6 +928,10 @@ export interface paths {
     /** Updates subscription */
     put: operations['OrgSubscriptionSystemController_updateSubscription']
   }
+  '/system/organizations/{slug}/restrictions': {
+    /** Updates restriction status of an org */
+    put: operations['OrgRestrictionsSystemController_updateRestriction']
+  }
   '/system/integrations/vercel/webhooks': {
     /** Processes Vercel event */
     post: operations['VercelWebhooksController_processEvent']
@@ -3631,6 +3635,10 @@ export interface components {
       is_branch_enabled: boolean
       parent_project_ref?: string
       is_read_replicas_enabled: boolean
+      sizeMigrationWindow: {
+        start?: string
+        end?: string
+      }
     }
     ProjectRefResponse: {
       id: number
@@ -4468,6 +4476,33 @@ export interface components {
       tier: 'tier_payg' | 'tier_pro' | 'tier_free' | 'tier_team' | 'tier_enterprise'
       price_id?: string
     }
+    RestrictionData: {
+      grace_period_end?: string
+      /** @enum {string} */
+      restrictions?: 'drop_requests_402'
+      violations?: (
+        | 'exceed_db_size_quota'
+        | 'exceed_egress_quota'
+        | 'exceed_edge_functions_count_quota'
+        | 'exceed_edge_functions_invocations_quota'
+        | 'exceed_monthly_active_users_quota'
+        | 'exceed_realtime_connection_count_quota'
+        | 'exceed_realtime_message_count_quota'
+        | 'exceed_storage_size_quota'
+        | 'overdue_payment'
+      )[]
+    }
+    UpdateRestrictionsBody: {
+      /** @enum {string} */
+      restriction_status: 'grace_period' | 'grace_period_over' | 'null' | 'restricted'
+      restriction_data?: components['schemas']['RestrictionData']
+    }
+    UpdateRestrictionsResponse: {
+      slug: string
+      /** @enum {string} */
+      restriction_status: 'grace_period' | 'grace_period_over' | 'null' | 'restricted'
+      restriction_data?: components['schemas']['RestrictionData']
+    }
     GetMetricsBody: {
       /** @enum {string} */
       metric: 'user_queries'
@@ -4587,6 +4622,7 @@ export interface components {
         | 'sa-east-1'
       /** @deprecated */
       kps_enabled?: boolean
+      desired_instance_size?: components['schemas']['DesiredInstanceSize']
     }
     ApiKeyResponse: {
       name: string
@@ -11587,6 +11623,31 @@ export interface operations {
         content: never
       }
       /** @description Failed to update subscription */
+      500: {
+        content: never
+      }
+    }
+  }
+  /** Updates restriction status of an org */
+  OrgRestrictionsSystemController_updateRestriction: {
+    parameters: {
+      path: {
+        /** @description Organization slug */
+        slug: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateRestrictionsBody']
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UpdateRestrictionsResponse']
+        }
+      }
+      /** @description Failed to update restriction status */
       500: {
         content: never
       }
