@@ -1,0 +1,53 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware to parse JSON request body
+app.use(bodyParser.json());
+
+// POST endpoint for handling Action fulfillment
+app.post('/webhook', (req, res) => {
+    // Get the request JSON from Google Assistant
+    const request = req.body;
+
+    // Log the request to console for debugging (optional)
+    console.log('Request:', request);
+
+    // Process the request and generate a response
+    const responseJson = processRequest(request);
+
+    // Log the response to console for debugging (optional)
+    console.log('Response:', responseJson);
+
+    // Send the response back to Google Assistant
+    res.json(responseJson);
+});
+
+// Function to process the request and generate a response
+function processRequest(request) {
+    // Extract relevant information from the request
+    const intent = request.queryResult.intent.displayName;
+    const parameters = request.queryResult.parameters;
+
+    // Perform logic based on the intent and parameters
+    let responseText = 'Sorry, I didn\'t understand that.';
+
+    // Example: Handle a specific intent
+    if (intent === 'YourIntentName') {
+        // Perform some action based on parameters
+        responseText = 'Your response goes here.';
+    }
+
+    // Construct and return the response JSON
+    const responseJson = {
+        fulfillmentText: responseText
+    };
+    return responseJson;
+}
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Webhook server is listening at http://localhost:${port}/webhook`);
+});
